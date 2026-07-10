@@ -28,7 +28,9 @@ jobs:
           python-version: "3.12"
       - name: Generate SVGs
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # ACCESS_TOKEN (a repo-scoped PAT, optional) lets the stats include private
+          # contributed-to repos and private contribution counts; GITHUB_TOKEN sees public only.
+          GH_TOKEN: ${{ secrets.ACCESS_TOKEN || secrets.GITHUB_TOKEN }}
           USER_LOGIN: WaterMenon09
         run: python generate.py
       - name: Commit if changed

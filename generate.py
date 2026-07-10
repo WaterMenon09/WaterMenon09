@@ -175,12 +175,12 @@ def stats_row(s):
         ("value", str(s["repos"])),
         ("fg", " {"), ("key", "Contributed"), ("fg", ": "),
         ("value", str(s["contributed"])), ("fg", "} | "),
-        ("key", "Commits"), ("fg", ":"),
+        ("key", "Contributions"), ("fg", ":"),
     ]
-    commits = f"{s['commits']:,}"
-    dots = W - seg_len(left) - 2 - len(commits)
+    contribs = f"{s['contributions']:,}"
+    dots = W - seg_len(left) - 2 - len(contribs)
     assert dots >= 2
-    return left + [("cc", " " + "." * dots + " "), ("value", commits)]
+    return left + [("cc", " " + "." * dots + " "), ("value", contribs)]
 
 
 def loc_row(s):
@@ -295,17 +295,19 @@ query($owner: String!, $name: String!, $authorId: ID!, $emails: [String!], $curs
 """
 
 
-def fetch_commit_total(years):
+def fetch_contribution_total(years):
+    """All-time contributions as GitHub counts them for the profile heatmap
+    (commits + PRs + issues + reviews), summed over calendar-year windows."""
     aliases = []
     for y in years:
         aliases.append(
             f'y{y}: contributionsCollection('
             f'from: "{y}-01-01T00:00:00Z", to: "{y + 1}-01-01T00:00:00Z")'
-            " { totalCommitContributions }"
+            " { contributionCalendar { totalContributions } }"
         )
     query = 'query($login: String!) { user(login: $login) { ' + " ".join(aliases) + " } }"
     data = gql(query, {"login": LOGIN})
-    return sum(v["totalCommitContributions"] for v in data["user"].values())
+    return sum(v["contributionCalendar"]["totalContributions"] for v in data["user"].values())
 
 
 def fetch_repo_loc(owner, name, author_id):
@@ -340,7 +342,7 @@ def fetch_stats():
     user = data["user"]
     created_at = datetime.fromisoformat(user["createdAt"].replace("Z", "+00:00"))
 
-    commits = fetch_commit_total(user["contributionsCollection"]["contributionYears"])
+    contributions = fetch_contribution_total(user["contributionsCollection"]["contributionYears"])
 
     repo_names = [n["nameWithOwner"] for n in user["repositories"]["nodes"]]
     additions = deletions = 0
@@ -356,7 +358,7 @@ def fetch_stats():
     return {
         "repos": user["repositories"]["totalCount"],
         "contributed": user["repositoriesContributedTo"]["totalCount"],
-        "commits": commits,
+        "contributions": contributions,
         "additions": additions,
         "deletions": deletions,
         "net": additions - deletions,
@@ -412,11 +414,11 @@ def main():
 
     stats = fetch_stats()
     print()
-    for k in ("repos", "contributed", "commits", "additions", "deletions", "net", "uptime"):
+    for k in ("repos", "contributed", "contributions", "additions", "deletions", "net", "uptime"):
         print(f"{k:>12}: {stats[k] if not isinstance(stats[k], int) else format(stats[k], ',')}")
 
     # sanity gate: a structurally-valid-but-empty result must never overwrite good SVGs
-    assert stats["repos"] > 0 and stats["commits"] > 0 and stats["additions"] > 0
+    assert stats["repos"] > 0 and stats["contributions"] > 0 and stats["additions"] > 0
 
     art = build_art()
     info = build_info(stats)
