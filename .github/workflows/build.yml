@@ -12,11 +12,17 @@ on:
 permissions:
   contents: write # new repos default the token to read-only
 
+concurrency:
+  group: build-profile # serialize runs; a queued run then no-ops via the diff guard
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main # branch tip, not trigger SHA — a queued run must see the previous run's commit
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
