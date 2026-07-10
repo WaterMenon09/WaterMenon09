@@ -83,13 +83,13 @@ Steps: checkout@v4 → setup-python@v5 (3.12) → `GH_TOKEN=${{secrets.GITHUB_TO
 
 ## Steps (checkbox-tracked; commit docs/plan.md first per durable-implementation-docs)
 
-- [ ] 1. **Scaffold**: `gh repo create WaterMenon09/WaterMenon09 --public --description "..."`; clone to `~/Desktop/Repositories/WaterMenon09`; commit `docs/plan.md` (this file) + `README.md` with the `<picture>` block (raw URLs will 404 until step 4 — fine)
-- [ ] 2. **Stats engine**: `generate.py` constants + `gql()` + 3 queries + `fetch_stats()` + uptime fn; run locally `GH_TOKEN=$(gh auth token) python generate.py` — verify printed table: Repos 12, Contributed ≥1, Maveric LOC row present (email filter should lift it above the 2-commit baseline)
-- [ ] 3. **Renderer**: author water ASCII art, `build_lines()` dot math, `render_svg()`, palettes, sanity gate, atomic writes
-- [ ] 4. **Visual verification loop** (Playwright): screenshot both SVGs at 980×530; check (a) all leader values right-align, (b) art never crosses x=400, (c) reads as water in both palettes; plus a scratch HTML harness with the README's `<picture>` block under `emulate_media` dark/light to prove source selection. Iterate art/geometry until clean
-- [ ] 5. **First publish**: commit `generate.py` + both SVGs; check github.com/WaterMenon09 in both GitHub themes (camo caches ~5 min — don't panic-debug staleness)
-- [ ] 6. **Automation**: add `build.yml`; run via `workflow_dispatch`; verify GITHUB_TOKEN handled all queries (fallback: no-scope PAT as `ACCESS_TOKEN`), bot commit identity correct, immediate re-run hits "No changes" path
-- [ ] 7. **Wrap-up**: tick checkboxes in committed plan; log worklog entry to Vault hub `01-Projects/personal-portfolio/personal-portfolio.md` (profile README is portfolio-adjacent work); note next-day cron check as follow-up
+- [x] 1. **Scaffold**: `gh repo create WaterMenon09/WaterMenon09 --public --description "..."`; clone to `~/Desktop/Repositories/WaterMenon09`; commit `docs/plan.md` (this file) + `README.md` with the `<picture>` block (raw URLs will 404 until step 4 — fine)
+- [x] 2. **Stats engine**: `generate.py` constants + `gql()` + 3 queries + `fetch_stats()` + uptime fn; run locally `GH_TOKEN=$(gh auth token) python generate.py` — verify printed table: Repos 12, Contributed ≥1, Maveric LOC row present (email filter should lift it above the 2-commit baseline)
+- [x] 3. **Renderer**: author water ASCII art, `build_lines()` dot math, `render_svg()`, palettes, sanity gate, atomic writes
+- [x] 4. **Visual verification loop** (Playwright): screenshot both SVGs at 980×530; check (a) all leader values right-align, (b) art never crosses x=400, (c) reads as water in both palettes; plus a scratch HTML harness with the README's `<picture>` block under `emulate_media` dark/light to prove source selection. Iterate art/geometry until clean
+- [x] 5. **First publish**: commit `generate.py` + both SVGs; check github.com/WaterMenon09 in both GitHub themes (camo caches ~5 min — don't panic-debug staleness)
+- [x] 6. **Automation**: add `build.yml`; run via `workflow_dispatch`; verify GITHUB_TOKEN handled all queries (fallback: no-scope PAT as `ACCESS_TOKEN`), bot commit identity correct, immediate re-run hits "No changes" path
+- [x] 7. **Wrap-up**: tick checkboxes in committed plan; log worklog entry to Vault hub `01-Projects/personal-portfolio/personal-portfolio.md` (profile README is portfolio-adjacent work); note next-day cron check as follow-up
 
 ## Verification
 
@@ -98,5 +98,13 @@ Steps: checkout@v4 → setup-python@v5 (3.12) → `GH_TOKEN=${{secrets.GITHUB_TO
 
 ## Known limits (accepted)
 
-- LOC counts primary-author + email-filtered commits only; co-authored-by credits still missed. Commits counter is immune (contributionsCollection).
+- LOC counts primary-author + email-filtered commits only; co-authored-by credits still missed. Contributions counter is immune (contributionsCollection).
 - Stats numbers today are modest by design choice — growth stats only; stars/followers deliberately excluded until worth showing.
+
+## Deviations from the approved plan (all user-directed or found during execution)
+
+- **Art is a Pac-Man chase, not water waves** — user corrected mid-build: the handle is a watermelon pun, not water, then chose a gaming theme (Pac-Man + four ghosts in canonical arcade colors) from a second option round.
+- **"Commits" became "Contributions"** — user asked for GitHub's heatmap metric (`contributionCalendar.totalContributions` summed per calendar year: commits + PRs + issues + reviews). Shows 539 vs 160 raw commits.
+- **Workflow race fixes** — the first push-triggered run collided with a concurrent dispatch run (both committed SVGs). Fixed with a `concurrency` group and `checkout ref: main` so queued runs see the previous run's bot commit and no-op via the diff guard. Verified: dispatch ✓, push ✓, idempotent re-run "No changes" ✓.
+- **`{Contributed: N}` is public-only under `GITHUB_TOKEN`** (shows 2; the real count incl. private CloudlyIO repos is 10). Workflow reads `secrets.ACCESS_TOKEN || secrets.GITHUB_TOKEN` — adding a repo-scoped PAT as the `ACCESS_TOKEN` secret upgrades the number, no code change needed. Contributions (539) already includes private activity because the account has "include private contributions" enabled.
+- **Playwright MCP was unresponsive** during the visual pass; used headless Chrome screenshots instead (same verification, different tool).
