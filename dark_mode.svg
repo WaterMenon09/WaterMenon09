@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="580" font-family="ConsolasFallback,Consolas,Menlo,monospace" font-size="16px">
+  <style>
+    @font-face {
+      font-family: 'ConsolasFallback';
+      src: local('Consolas');
+      font-display: swap;
+      size-adjust: 109%;
+    }
+    .key {fill: #79c0ff;}
+    .value {fill: #a5d6ff;}
+    .cc {fill: #616e7f;}
+    .add {fill: #3fb950;}
+    .del {fill: #f85149;}
+    .pac {fill: #e3b341;}
+    .g1 {fill: #ff7b72;}
+    .g2 {fill: #f778ba;}
+    .g3 {fill: #56d4dd;}
+    .g4 {fill: #ffa657;}
+    .eye {fill: #e6edf3;}
+    text, tspan {white-space: pre;}
+  </style>
+  <rect x="0.5" y="0.5" width="999" height="579" rx="15" fill="#0d1117" stroke="#30363d"/>
+  <text x="15" y="35" fill="#c9d1d9">
+    <tspan x="15" y="55"><tspan class="pac">        .--"""--.</tspan></tspan>
+    <tspan x="15" y="75"><tspan class="pac">       /  o      \</tspan></tspan>
+    <tspan x="15" y="95"><tspan class="pac">      |      ,----'</tspan><tspan class="cc">  . . . . .</tspan></tspan>
+    <tspan x="15" y="115"><tspan class="pac">      |      '----.</tspan><tspan class="cc">  . . . . .</tspan></tspan>
+    <tspan x="15" y="135"><tspan class="pac">       \          /</tspan></tspan>
+    <tspan x="15" y="155"><tspan class="pac">        '--...--'</tspan></tspan>
+    <tspan x="15" y="195"><tspan class="cc">             .    .    .</tspan></tspan>
+    <tspan x="15" y="235">       <tspan class="g1"> .-'''-.  </tspan> <tspan class="g2"> .-'''-.  </tspan></tspan>
+    <tspan x="15" y="255">       <tspan class="g1">/       \ </tspan> <tspan class="g2">/       \ </tspan></tspan>
+    <tspan x="15" y="275">       <tspan class="g1">| </tspan><tspan class="eye">o   o</tspan><tspan class="g1"> | </tspan> <tspan class="g2">| </tspan><tspan class="eye">o   o</tspan><tspan class="g2"> | </tspan></tspan>
+    <tspan x="15" y="295">       <tspan class="g1">|       | </tspan> <tspan class="g2">|       | </tspan></tspan>
+    <tspan x="15" y="315">       <tspan class="g1">'\/\/\/\' </tspan> <tspan class="g2">'\/\/\/\' </tspan></tspan>
+    <tspan x="15" y="355">       <tspan class="g3"> .-'''-.  </tspan> <tspan class="g4"> .-'''-.  </tspan></tspan>
+    <tspan x="15" y="375">       <tspan class="g3">/       \ </tspan> <tspan class="g4">/       \ </tspan></tspan>
+    <tspan x="15" y="395">       <tspan class="g3">| </tspan><tspan class="eye">o   o</tspan><tspan class="g3"> | </tspan> <tspan class="g4">| </tspan><tspan class="eye">o   o</tspan><tspan class="g4"> | </tspan></tspan>
+    <tspan x="15" y="415">       <tspan class="g3">|       | </tspan> <tspan class="g4">|       | </tspan></tspan>
+    <tspan x="15" y="435">       <tspan class="g3">'\/\/\/\' </tspan> <tspan class="g4">'\/\/\/\' </tspan></tspan>
+    <tspan x="15" y="475"><tspan class="cc">     . . . . </tspan><tspan class="pac">O</tspan><tspan class="cc"> . . . .</tspan></tspan>
+    <tspan x="15" y="515"><tspan class="pac">            R E A D Y !</tspan></tspan>
+  </text>
+  <text x="385" y="35" fill="#c9d1d9">
+    <tspan x="385" y="35"><tspan class="key">menon</tspan>@<tspan class="key">pranto</tspan><tspan class="cc"> ─────────────────────────────────────────────────</tspan></tspan>
+    <tspan x="385" y="55"><tspan class="key">OS</tspan>:<tspan class="cc"> ................................... </tspan><tspan class="value">macOS, Ubuntu, Windows</tspan></tspan>
+    <tspan x="385" y="75"><tspan class="key">Uptime</tspan>:<tspan class="cc"> ............................ </tspan><tspan class="value">4 years, 3 months, 0 days</tspan></tspan>
+    <tspan x="385" y="95"><tspan class="key">Host</tspan>:<tspan class="cc"> ............................................. </tspan><tspan class="value">Cloudly IO</tspan></tspan>
+    <tspan x="385" y="115"><tspan class="key">Kernel</tspan>:<tspan class="cc"> ....................................... </tspan><tspan class="value">AI/ML Engineer</tspan></tspan>
+    <tspan x="385" y="135"><tspan class="key">IDE</tspan>:<tspan class="cc"> .................................... </tspan><tspan class="value">VS Code, Claude Code</tspan></tspan>
+    <tspan x="385" y="155"><tspan class="key">Location</tspan>:<tspan class="cc"> .......................... </tspan><tspan class="value">Dhaka, Bangladesh (UTC+6)</tspan></tspan>
+    <tspan x="385" y="195"><tspan class="key">OSS</tspan>:<tspan class="cc"> ................. </tspan><tspan class="value">Maveric (Linux Foundation Connectivity)</tspan></tspan>
+    <tspan x="385" y="235"><tspan class="key">Languages.Programming</tspan>:<tspan class="cc"> .. </tspan><tspan class="value">Python, C/C++, Java, JavaScript, SQL</tspan></tspan>
+    <tspan x="385" y="255"><tspan class="key">Languages.ML</tspan>:<tspan class="cc"> ............. </tspan><tspan class="value">PyTorch, TensorFlow, scikit-learn,</tspan></tspan>
+    <tspan x="385" y="275">                                   <tspan class="value">Stable-Baselines3, GPyTorch</tspan></tspan>
+    <tspan x="385" y="295"><tspan class="key">Languages.Agents</tspan>:<tspan class="cc"> ... </tspan><tspan class="value">LangGraph, LangChain, MCP, RAG, pgvector</tspan></tspan>
+    <tspan x="385" y="315"><tspan class="key">Languages.Infra</tspan>:<tspan class="cc"> .... </tspan><tspan class="value">FastAPI, Kafka, Docker, Kubernetes, AWS,</tspan></tspan>
+    <tspan x="385" y="335">                                 <tspan class="value">PostgreSQL, Redis, Prometheus</tspan></tspan>
+    <tspan x="385" y="355"><tspan class="key">Domain</tspan>:<tspan class="cc"> .......... </tspan><tspan class="value">O-RAN, 3GPP, Bayesian digital twins, RL/PPO</tspan></tspan>
+    <tspan x="385" y="395"><tspan class="cc">─ </tspan><tspan class="key">Contact</tspan><tspan class="cc"> ────────────────────────────────────────────────────</tspan></tspan>
+    <tspan x="385" y="415"><tspan class="key">Email</tspan>:<tspan class="cc"> ................................. </tspan><tspan class="value">menonpranto@gmail.com</tspan></tspan>
+    <tspan x="385" y="435"><tspan class="key">LinkedIn</tspan>:<tspan class="cc"> .......................... </tspan><tspan class="value">in/menon-pranto-9789871a1</tspan></tspan>
+    <tspan x="385" y="455"><tspan class="key">LeetCode</tspan>:<tspan class="cc"> ......................................... </tspan><tspan class="value">WaterMenon</tspan></tspan>
+    <tspan x="385" y="475"><tspan class="key">Web</tspan>:<tspan class="cc"> ............... </tspan><tspan class="value">watermenon09.github.io/Personal-Portfolio</tspan></tspan>
+    <tspan x="385" y="515"><tspan class="cc">─ </tspan><tspan class="key">GitHub Stats</tspan><tspan class="cc"> ───────────────────────────────────────────────</tspan></tspan>
+    <tspan x="385" y="535"><tspan class="key">Repos</tspan>:<tspan class="cc"> .... </tspan><tspan class="value">13</tspan> {<tspan class="key">Contributed</tspan>: <tspan class="value">10</tspan>} | <tspan class="key">Commits</tspan>:<tspan class="cc"> .............. </tspan><tspan class="value">160</tspan></tspan>
+    <tspan x="385" y="555"><tspan class="key">Lines of Code</tspan>:<tspan class="cc"> ................. </tspan><tspan class="value">16,164</tspan> ( <tspan class="add">60,665++</tspan>, <tspan class="del">44,501--</tspan> )</tspan>
+  </text>
+</svg>

@@ -1,3 +1,4 @@
+<!-- markdownlint-disable MD033 MD041 — profile READMEs need inline HTML for the dark/light <picture> switch -->
 <a href="https://watermenon09.github.io/Personal-Portfolio">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/WaterMenon09/WaterMenon09/main/dark_mode.svg">
