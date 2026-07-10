@@ -1,0 +1,38 @@
+name: build-profile
+
+on:
+  schedule:
+    - cron: "17 2 * * *" # off :00 to dodge GitHub's top-of-hour cron congestion
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "*.svg" # bot commits touch only SVGs; belt-and-braces against loops
+
+permissions:
+  contents: write # new repos default the token to read-only
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Generate SVGs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          USER_LOGIN: WaterMenon09
+        run: python generate.py
+      - name: Commit if changed
+        run: |
+          if git diff --quiet -- dark_mode.svg light_mode.svg; then
+            echo "No changes to commit"
+          else
+            git config user.name  "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add dark_mode.svg light_mode.svg
+            git commit -m "chore: refresh profile stats"
+            git push
+          fi
