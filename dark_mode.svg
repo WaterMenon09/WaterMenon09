@@ -44,7 +44,7 @@
   <text x="385" y="35" fill="#c9d1d9">
     <tspan x="385" y="35"><tspan class="key">menon</tspan>@<tspan class="key">pranto</tspan><tspan class="cc"> ─────────────────────────────────────────────────</tspan></tspan>
     <tspan x="385" y="55"><tspan class="key">OS</tspan>:<tspan class="cc"> ................................... </tspan><tspan class="value">macOS, Ubuntu, Windows</tspan></tspan>
-    <tspan x="385" y="75"><tspan class="key">Uptime</tspan>:<tspan class="cc"> ............................ </tspan><tspan class="value">4 years, 3 months, 4 days</tspan></tspan>
+    <tspan x="385" y="75"><tspan class="key">Uptime</tspan>:<tspan class="cc"> ............................ </tspan><tspan class="value">4 years, 3 months, 5 days</tspan></tspan>
     <tspan x="385" y="95"><tspan class="key">Host</tspan>:<tspan class="cc"> ............................................. </tspan><tspan class="value">Cloudly IO</tspan></tspan>
     <tspan x="385" y="115"><tspan class="key">Kernel</tspan>:<tspan class="cc"> ....................................... </tspan><tspan class="value">AI/ML Engineer</tspan></tspan>
     <tspan x="385" y="135"><tspan class="key">IDE</tspan>:<tspan class="cc"> .................................... </tspan><tspan class="value">VS Code, Claude Code</tspan></tspan>
@@ -63,7 +63,7 @@
     <tspan x="385" y="455"><tspan class="key">LeetCode</tspan>:<tspan class="cc"> ......................................... </tspan><tspan class="value">WaterMenon</tspan></tspan>
     <tspan x="385" y="475"><tspan class="key">Web</tspan>:<tspan class="cc"> ............... </tspan><tspan class="value">watermenon09.github.io/Personal-Portfolio</tspan></tspan>
     <tspan x="385" y="515"><tspan class="cc">─ </tspan><tspan class="key">GitHub Stats</tspan><tspan class="cc"> ───────────────────────────────────────────────</tspan></tspan>
-    <tspan x="385" y="535"><tspan class="key">Repos</tspan>:<tspan class="cc"> .... </tspan><tspan class="value">13</tspan> {<tspan class="key">Contributed</tspan>: <tspan class="value">10</tspan>} | <tspan class="key">Contributions</tspan>:<tspan class="cc"> ........ </tspan><tspan class="value">547</tspan></tspan>
+    <tspan x="385" y="535"><tspan class="key">Repos</tspan>:<tspan class="cc"> .... </tspan><tspan class="value">13</tspan> {<tspan class="key">Contributed</tspan>: <tspan class="value">10</tspan>} | <tspan class="key">Contributions</tspan>:<tspan class="cc"> ........ </tspan><tspan class="value">551</tspan></tspan>
     <tspan x="385" y="555"><tspan class="key">Lines of Code</tspan>:<tspan class="cc"> ................. </tspan><tspan class="value">16,794</tspan> ( <tspan class="add">61,315++</tspan>, <tspan class="del">44,521--</tspan> )</tspan>
   </text>
 </svg>
