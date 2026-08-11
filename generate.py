@@ -251,6 +251,18 @@ def gql(query, variables=None):
                 raise RuntimeError(
                     f"rate limited ({e.code}), Retry-After={e.headers.get('Retry-After')}: {detail}"
                 ) from e
+            if e.code == 401:
+                # Never transient — retrying just re-sends a dead credential.
+                raise RuntimeError(
+                    f"HTTP 401 Bad credentials: {detail}\n"
+                    "The ACCESS_TOKEN PAT has most likely expired. Check "
+                    "https://github.com/settings/tokens, then rotate it with:\n"
+                    f"  gh secret set ACCESS_TOKEN --repo {LOGIN}/{LOGIN}\n"
+                    "Do NOT delete the secret to 'fix' this: the workflow's "
+                    "`secrets.ACCESS_TOKEN || secrets.GITHUB_TOKEN` fallback only fires when the "
+                    "secret is absent, and GITHUB_TOKEN sees public data only — the build would go "
+                    "green while publishing understated stats."
+                ) from e
             last_err = RuntimeError(f"HTTP {e.code}: {detail}")
         except urllib.error.URLError as e:
             last_err = RuntimeError(f"network error: {e}")

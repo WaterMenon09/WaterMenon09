@@ -28,8 +28,16 @@ jobs:
           python-version: "3.12"
       - name: Generate SVGs
         env:
-          # ACCESS_TOKEN (a repo-scoped PAT, optional) lets the stats include private
-          # contributed-to repos and private contribution counts; GITHUB_TOKEN sees public only.
+          # ACCESS_TOKEN is a classic PAT (scopes: repo + read:user). It is NOT optional in
+          # practice — it lets the stats include private contributed-to repos and private
+          # contribution counts. Measured 2026-08-11: with it, contributed-to = 10 and
+          # contributions ~= 601; with GITHUB_TOKEN alone, 2 and ~336.
+          #
+          # `||` falls through only when ACCESS_TOKEN is ABSENT, never when it is expired or
+          # revoked — an expired PAT hard-fails the build with HTTP 401. That is deliberate:
+          # generate.py's sanity gate only checks `> 0`, so it cannot tell degraded-but-valid
+          # output from correct output. Failing loudly beats silently committing wrong numbers
+          # to a public profile. So do NOT "fix" a 401 by deleting this secret — rotate it.
           GH_TOKEN: ${{ secrets.ACCESS_TOKEN || secrets.GITHUB_TOKEN }}
           USER_LOGIN: WaterMenon09
         run: python generate.py
