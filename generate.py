@@ -23,7 +23,14 @@ from xml.sax.saxutils import escape
 
 LOGIN = os.environ.get("USER_LOGIN", "WaterMenon09")
 EXTRA_REPOS = ["lf-connectivity/maveric"]        # external repos counted in LOC
-EXTRA_AUTHOR_EMAILS = ["menonpranto@gmail.com"]  # extra commit-author emails for LOC
+# NOTE: inert. GitHub's CommitAuthor gives `id` precedence over `emails`, so once
+# fetch_repo_loc() passes a non-null author id the emails are ignored (verified:
+# author:{id} and author:{id,emails} return identical history in every scanned repo).
+# It's also redundant — menonpranto@gmail.com is a verified account email, so the id
+# filter already includes every gmail-authored commit. Kept as a marker of intent; to
+# make an email filter actually count, query author:{emails:...} WITHOUT an id and
+# union results by commit oid.
+EXTRA_AUTHOR_EMAILS = ["menonpranto@gmail.com"]  # inert — see note above
 
 # --- Layout constants ----------------------------------------------------------
 
@@ -282,6 +289,7 @@ query($owner: String!, $name: String!, $authorId: ID!, $emails: [String!], $curs
     defaultBranchRef {
       target {
         ... on Commit {
+          # id takes precedence over emails server-side; $emails is inert here (see EXTRA_AUTHOR_EMAILS)
           history(first: 100, author: {id: $authorId, emails: $emails}, after: $cursor) {
             totalCount
             pageInfo { hasNextPage endCursor }
