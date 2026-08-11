@@ -229,6 +229,54 @@ def format_uptime(created_at, now):
 API = "https://api.github.com/graphql"
 
 
+def _is_rate_limit(e, detail):
+    """True only for a genuine rate-limit 403. GitHub overloads 403 for credential
+    and SSO failures too, so the status code alone can't tell them apart."""
+    if e.code != 403:
+        return False
+    if e.headers.get("x-ratelimit-remaining") == "0":
+        return True
+    low = detail.lower()
+    return "rate limit" in low or "abuse" in low
+
+
+def _credential_help(e, detail):
+    """Actionable guidance for a 401/403 credential failure, tailored to CI vs local
+    so the message names the credential that actually needs fixing."""
+    lines = [detail]
+    sso = e.headers.get("X-GitHub-SSO")
+    if sso:
+        # Print only the directive, never the full value: it carries org ids and an
+        # authorization nonce, and unlike ACCESS_TOKEN it is not a registered secret,
+        # so Actions would not mask it in the public run log.
+        lines.append(
+            f"The token is not SSO-authorized for an org it needs (X-GitHub-SSO: "
+            f"{sso.split(';')[0].strip()}). Open it at https://github.com/settings/tokens "
+            "and use 'Configure SSO' > Authorize."
+        )
+    elif e.code == 401:
+        lines.append("Bad credentials — the token is expired, revoked, or malformed.")
+    else:
+        lines.append("Forbidden — the token is likely missing a scope (needs: repo, read:user).")
+
+    if os.environ.get("GITHUB_ACTIONS"):
+        repo = os.environ.get("GITHUB_REPOSITORY") or f"{LOGIN}/{LOGIN}"
+        lines.append(
+            "This is CI, so the credential is the ACCESS_TOKEN secret. Rotate it with:\n"
+            f"  gh secret set ACCESS_TOKEN --repo {repo}\n"
+            "Do NOT delete the secret to 'fix' this. The workflow's "
+            "`secrets.ACCESS_TOKEN || secrets.GITHUB_TOKEN` fallback fires only when the secret is "
+            "absent or empty, never when it is expired — and GITHUB_TOKEN cannot see private "
+            "contributed-to repos, so deleting it turns the build green while understating stats."
+        )
+    else:
+        lines.append(
+            "Running locally, so this is your CLI session, not the ACCESS_TOKEN secret: "
+            "re-run `gh auth login`, then GH_TOKEN=$(gh auth token) python3 generate.py"
+        )
+    return "\n".join(lines)
+
+
 def gql(query, variables=None):
     payload = json.dumps({"query": query, "variables": variables or {}}).encode()
     last_err = None
@@ -247,21 +295,22 @@ def gql(query, variables=None):
                 body = json.load(resp)
         except urllib.error.HTTPError as e:
             detail = e.read().decode(errors="replace")[:500]
+            if e.code in (401, 403) and not _is_rate_limit(e, detail):
+                # Credential problem, never transient — retrying re-sends a dead token.
+                # 403 lands here too, because GitHub overloads it for missing scopes and
+                # SSO-unauthorized tokens as well as for rate limits — a plausible failure
+                # right after rotating a PAT, since the stats read private CloudlyIO repos.
+                # Reporting any of those as "rate limited" sends the next maintainer down
+                # the wrong path. (Note: GraphQL primary rate limits arrive as 200 + an
+                # `errors` array, not 403, so they never reach this branch at all.)
+                raise RuntimeError(f"HTTP {e.code} — {_credential_help(e, detail)}") from e
             if e.code in (403, 429):
+                # Primary rate limits carry no Retry-After (that's a secondary-limit
+                # signal), so surface the x-ratelimit-* headers as well.
                 raise RuntimeError(
-                    f"rate limited ({e.code}), Retry-After={e.headers.get('Retry-After')}: {detail}"
-                ) from e
-            if e.code == 401:
-                # Never transient — retrying just re-sends a dead credential.
-                raise RuntimeError(
-                    f"HTTP 401 Bad credentials: {detail}\n"
-                    "The ACCESS_TOKEN PAT has most likely expired. Check "
-                    "https://github.com/settings/tokens, then rotate it with:\n"
-                    f"  gh secret set ACCESS_TOKEN --repo {LOGIN}/{LOGIN}\n"
-                    "Do NOT delete the secret to 'fix' this: the workflow's "
-                    "`secrets.ACCESS_TOKEN || secrets.GITHUB_TOKEN` fallback only fires when the "
-                    "secret is absent, and GITHUB_TOKEN sees public data only — the build would go "
-                    "green while publishing understated stats."
+                    f"rate limited ({e.code}), Retry-After={e.headers.get('Retry-After')}, "
+                    f"remaining={e.headers.get('x-ratelimit-remaining')}, "
+                    f"reset={e.headers.get('x-ratelimit-reset')}: {detail}"
                 ) from e
             last_err = RuntimeError(f"HTTP {e.code}: {detail}")
         except urllib.error.URLError as e:
