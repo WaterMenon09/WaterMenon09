@@ -8,7 +8,7 @@
 </a>
 
 <!--
-The card above is regenerated daily by .github/workflows/build.yml running generate.py
+The card above is regenerated every 8 hours by .github/workflows/build.yml running generate.py
 (stdlib-only Python -> GitHub GraphQL API -> dark_mode.svg / light_mode.svg).
 Layout inspired by github.com/Andrew6rant/Andrew6rant; implementation written from scratch.
 -->

@@ -6,6 +6,10 @@ neofetch-style card: Pac-Man chase ASCII art on the left, dotted-leader info
 and stats on the right. Fails loudly on any fetch or render problem so CI
 never commits a broken SVG.
 
+Stats cover private repos too (owned, collaborator, and contributed-to), so the
+token must be able to see them. This repo and its Actions logs are public, so
+private repo names are never printed.
+
 Usage:  GH_TOKEN=$(gh auth token) python3 generate.py
 """
 
@@ -22,7 +26,12 @@ from xml.sax.saxutils import escape
 # --- EDIT ME: profile content -------------------------------------------------
 
 LOGIN = os.environ.get("USER_LOGIN", "WaterMenon09")
-EXTRA_REPOS = ["lf-connectivity/maveric"]        # external repos counted in LOC
+# Scanned first, so an upstream (not one of its forks) gets the credit for commits
+# they share. Also the escape hatch for a repo the discovery queries can't see.
+EXTRA_REPOS = ["lf-connectivity/maveric"]
+# Repos carrying this topic are left out of Lines of Code (notes, data dumps) but
+# still count as repos. A topic, not a name list, so private names stay out of here.
+EXCLUDE_TOPIC = "profile-stats-exclude"
 # NOTE: inert. GitHub's CommitAuthor gives `id` precedence over `emails`, so once
 # fetch_repo_loc() passes a non-null author id the emails are ignored (verified:
 # author:{id} and author:{id,emails} return identical history in every scanned repo).
@@ -325,24 +334,47 @@ def gql(query, variables=None):
     raise last_err
 
 
+REPO_FRAGMENT = """
+fragment Repo on Repository {
+  nameWithOwner
+  isPrivate
+  isFork
+  repositoryTopics(first: 20) { nodes { topic { name } } }
+}
+"""
+
 BOOTSTRAP_QUERY = """
 query($login: String!) {
   user(login: $login) {
     id
     createdAt
     contributionsCollection { contributionYears }
-    repositories(first: 100, ownerAffiliations: OWNER, isFork: false, privacy: PUBLIC) {
+    repositories(first: 100, ownerAffiliations: OWNER, isFork: false) {
       totalCount
-      nodes { nameWithOwner }
+      nodes { ...Repo }
     }
+    collaborated: repositories(first: 100, ownerAffiliations: [COLLABORATOR, ORGANIZATION_MEMBER]) {
+      totalCount
+      nodes { ...Repo }
+    }
+    # "recently contributed to" per GitHub: a rolling window, so only a discovery source,
+    # never the Contributed count itself (that fell 10 -> 9 as old repos aged out)
     repositoriesContributedTo(
-      first: 1,
+      first: 100,
       contributionTypes: [COMMIT, PULL_REQUEST, REPOSITORY, PULL_REQUEST_REVIEW],
       includeUserRepositories: false
-    ) { totalCount }
+    ) {
+      totalCount
+      nodes { ...Repo }
+    }
+    # all-time, unlike the above: keeps a PR-only repo counted after it ages out
+    pullRequests(first: 100) {
+      totalCount
+      nodes { repository { ...Repo } }
+    }
   }
 }
-"""
+""" + REPO_FRAGMENT
 
 LOC_QUERY = """
 query($owner: String!, $name: String!, $authorId: ID!, $emails: [String!], $cursor: String) {
@@ -354,7 +386,7 @@ query($owner: String!, $name: String!, $authorId: ID!, $emails: [String!], $curs
           history(first: 100, author: {id: $authorId, emails: $emails}, after: $cursor) {
             totalCount
             pageInfo { hasNextPage endCursor }
-            nodes { additions deletions }
+            nodes { oid additions deletions parents { totalCount } }
           }
         }
       }
@@ -364,23 +396,41 @@ query($owner: String!, $name: String!, $authorId: ID!, $emails: [String!], $curs
 """
 
 
-def fetch_contribution_total(years):
+def is_own(full_name):
+    return full_name.split("/")[0].lower() == LOGIN.lower()
+
+
+def fetch_contributions(years):
     """All-time contributions as GitHub counts them for the profile heatmap
-    (commits + PRs + issues + reviews), summed over calendar-year windows."""
+    (commits + PRs + issues + reviews), summed over calendar-year windows, plus
+    every repo committed to in those windows. GitHub hides private repos from
+    that list (they land in restrictedContributionsCount), so it mostly finds
+    public OSS repos contributed to by PR without collaborator access."""
     aliases = []
     for y in years:
         aliases.append(
             f'y{y}: contributionsCollection('
             f'from: "{y}-01-01T00:00:00Z", to: "{y + 1}-01-01T00:00:00Z")'
-            " { contributionCalendar { totalContributions } }"
+            " { contributionCalendar { totalContributions }"
+            " commitContributionsByRepository(maxRepositories: 100) { repository { ...Repo } } }"
         )
-    query = 'query($login: String!) { user(login: $login) { ' + " ".join(aliases) + " } }"
+    query = (
+        'query($login: String!) { user(login: $login) { ' + " ".join(aliases) + " } }"
+        + REPO_FRAGMENT
+    )
     data = gql(query, {"login": LOGIN})
-    return sum(v["contributionCalendar"]["totalContributions"] for v in data["user"].values())
+    years_data = data["user"].values()
+    total = sum(v["contributionCalendar"]["totalContributions"] for v in years_data)
+    repos = [r["repository"] for v in years_data for r in v["commitContributionsByRepository"]]
+    return total, repos
 
 
-def fetch_repo_loc(owner, name, author_id):
-    additions = deletions = commits = 0
+def fetch_repo_loc(full_name, author_id, seen):
+    """Author-filtered additions/deletions on the default branch. Skips merge commits,
+    whose additions are the whole merged diff (other people's code), and any commit
+    already counted in another repo (forks and mirrors share history)."""
+    owner, name = full_name.split("/")
+    additions = deletions = commits = merges = dupes = 0
     cursor = None
     while True:
         data = gql(
@@ -392,17 +442,23 @@ def fetch_repo_loc(owner, name, author_id):
         )
         repo = data["repository"]
         if repo is None:
-            raise RuntimeError(f"repository {owner}/{name} not found")
+            raise RuntimeError(f"repository {full_name} not found")
         ref = repo["defaultBranchRef"]
         if ref is None:  # empty repository
-            return 0, 0, 0
+            return 0, 0, 0, 0, 0
         history = ref["target"]["history"]
         for node in history["nodes"]:
-            additions += node["additions"]
-            deletions += node["deletions"]
-            commits += 1
+            if node["parents"]["totalCount"] > 1:
+                merges += 1
+            elif node["oid"] in seen:
+                dupes += 1
+            else:
+                seen.add(node["oid"])
+                additions += node["additions"]
+                deletions += node["deletions"]
+                commits += 1
         if not history["pageInfo"]["hasNextPage"]:
-            return additions, deletions, commits
+            return additions, deletions, commits, merges, dupes
         cursor = history["pageInfo"]["endCursor"]
 
 
@@ -410,23 +466,70 @@ def fetch_stats():
     data = gql(BOOTSTRAP_QUERY, {"login": LOGIN})
     user = data["user"]
     created_at = datetime.fromisoformat(user["createdAt"].replace("Z", "+00:00"))
+    for key in ("repositories", "collaborated", "repositoriesContributedTo", "pullRequests"):
+        n = user[key]["totalCount"]
+        assert n <= 100, f"{key} has {n} entries; paginate before trusting the first 100"
 
-    contributions = fetch_contribution_total(user["contributionsCollection"]["contributionYears"])
+    contributions, committed_to = fetch_contributions(
+        user["contributionsCollection"]["contributionYears"]
+    )
+    recent = user["repositoriesContributedTo"]["nodes"]
+    pr_repos = [pr["repository"] for pr in user["pullRequests"]["nodes"]]
 
-    repo_names = [n["nameWithOwner"] for n in user["repositories"]["nodes"]]
+    # Insertion order is scan order, and a shared commit is credited to the first repo
+    # that has it, so EXTRA_REPOS (upstreams) go first and setdefault keeps them there.
+    targets = {name: {"private": False, "fork": False, "excluded": False} for name in EXTRA_REPOS}
+    for node in (
+        user["repositories"]["nodes"] + user["collaborated"]["nodes"]
+        + recent + committed_to + pr_repos
+    ):
+        topics = {t["topic"]["name"] for t in node["repositoryTopics"]["nodes"]}
+        targets.setdefault(node["nameWithOwner"], {
+            "private": node["isPrivate"], "fork": node["isFork"],
+            "excluded": EXCLUDE_TOPIC in topics,
+        })
+
+    # A fork never counts as a contributed repo: its shared work belongs to the upstream.
+    def counts(name):
+        return not is_own(name) and not targets[name]["fork"]
+
+    contributed = {n["nameWithOwner"] for n in recent + committed_to + pr_repos}
+    contributed = {name for name in contributed if counts(name)}
     additions = deletions = 0
-    print(f"{'repository':<44} {'adds':>9} {'dels':>9} {'commits':>7}")
-    for full_name in repo_names + EXTRA_REPOS:
-        owner, name = full_name.split("/")
-        a, d, c = fetch_repo_loc(owner, name, user["id"])
+    seen = set()
+    private_n = excluded_n = 0
+    print(f"{'repository':<52} {'adds':>9} {'dels':>9} {'commits':>7} {'merges':>6} {'dupes':>5}")
+    for full_name, t in targets.items():
+        label = full_name
+        if t["private"]:
+            private_n += 1
+            label = f"(private repo {private_n})"
+        if t["excluded"]:
+            excluded_n += 1
+            continue
+        try:
+            a, d, c, m, dup = fetch_repo_loc(full_name, user["id"], seen)
+        except RuntimeError as e:
+            if not t["private"]:
+                raise
+            # The Actions log is public: keep the diagnosis (credential/SSO help, rate-limit
+            # detail) but swap the private name out, and drop the unmasked original.
+            msg = str(e).replace(full_name, label).replace(full_name.split("/")[1], label)
+            raise RuntimeError(msg) from None
         additions += a
         deletions += d
-        print(f"{full_name:<44} {a:>9,} {d:>9,} {c:>7,}")
+        # dupes count too: a non-fork mirror's commits are the user's even when the
+        # LOC was already credited to the repo it mirrors
+        if (c or dup) and counts(full_name):
+            contributed.add(full_name)
+        print(f"{label:<52} {a:>9,} {d:>9,} {c:>7,} {m:>6,} {dup:>5,}")
+    print(f"skipped {excluded_n} repo(s) tagged {EXCLUDE_TOPIC}")
 
     now = datetime.now(timezone.utc)
     return {
         "repos": user["repositories"]["totalCount"],
-        "contributed": user["repositoriesContributedTo"]["totalCount"],
+        "private_repos": sum(n["isPrivate"] for n in user["repositories"]["nodes"]),
+        "contributed": len(contributed),
         "contributions": contributions,
         "additions": additions,
         "deletions": deletions,
@@ -483,11 +586,19 @@ def main():
 
     stats = fetch_stats()
     print()
-    for k in ("repos", "contributed", "contributions", "additions", "deletions", "net", "uptime"):
-        print(f"{k:>12}: {stats[k] if not isinstance(stats[k], int) else format(stats[k], ',')}")
+    for k in ("repos", "private_repos", "contributed", "contributions",
+              "additions", "deletions", "net", "uptime"):
+        print(f"{k:>13}: {stats[k] if not isinstance(stats[k], int) else format(stats[k], ',')}")
 
     # sanity gate: a structurally-valid-but-empty result must never overwrite good SVGs
     assert stats["repos"] > 0 and stats["contributions"] > 0 and stats["additions"] > 0
+    # A token that can't see private repos (ACCESS_TOKEN missing, so GITHUB_TOKEN is used,
+    # or a PAT without `repo`) still returns valid public-only numbers. Fail instead of
+    # quietly shrinking the card.
+    assert stats["private_repos"] > 0, (
+        "no private repos visible: the token can't see private repos, so every stat "
+        "would be public-only. Check the ACCESS_TOKEN secret (classic PAT: repo, read:user)."
+    )
 
     art = build_art()
     info = build_info(stats)
