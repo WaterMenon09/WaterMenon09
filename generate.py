@@ -238,6 +238,16 @@ def format_uptime(created_at, now):
 API = "https://api.github.com/graphql"
 
 
+class GqlError(RuntimeError):
+    """A failed GraphQL call, with the structured fields that are safe to print for a
+    private repo: the HTTP status and GraphQL error type codes, never upstream text."""
+
+    def __init__(self, msg, status=None, types=()):
+        super().__init__(msg)
+        self.status = status
+        self.types = tuple(types)
+
+
 def _is_rate_limit(e, detail):
     """True only for a genuine rate-limit 403. GitHub overloads 403 for credential
     and SSO failures too, so the status code alone can't tell them apart."""
@@ -312,23 +322,27 @@ def gql(query, variables=None):
                 # Reporting any of those as "rate limited" sends the next maintainer down
                 # the wrong path. (Note: GraphQL primary rate limits arrive as 200 + an
                 # `errors` array, not 403, so they never reach this branch at all.)
-                raise RuntimeError(f"HTTP {e.code} — {_credential_help(e, detail)}") from e
+                raise GqlError(f"HTTP {e.code} — {_credential_help(e, detail)}", e.code) from e
             if e.code in (403, 429):
                 # Primary rate limits carry no Retry-After (that's a secondary-limit
                 # signal), so surface the x-ratelimit-* headers as well.
-                raise RuntimeError(
+                raise GqlError(
                     f"rate limited ({e.code}), Retry-After={e.headers.get('Retry-After')}, "
                     f"remaining={e.headers.get('x-ratelimit-remaining')}, "
-                    f"reset={e.headers.get('x-ratelimit-reset')}: {detail}"
+                    f"reset={e.headers.get('x-ratelimit-reset')}: {detail}",
+                    e.code,
                 ) from e
-            last_err = RuntimeError(f"HTTP {e.code}: {detail}")
+            last_err = GqlError(f"HTTP {e.code}: {detail}", e.code)
         except urllib.error.URLError as e:
-            last_err = RuntimeError(f"network error: {e}")
+            last_err = GqlError(f"network error: {e}")
         else:
             if body.get("errors"):
-                raise RuntimeError(f"GraphQL errors: {json.dumps(body['errors'])[:1000]}")
+                raise GqlError(
+                    f"GraphQL errors: {json.dumps(body['errors'])[:1000]}",
+                    types=sorted({str(err.get("type")) for err in body["errors"]}),
+                )
             if body.get("data") is None:
-                raise RuntimeError(f"empty GraphQL data: {json.dumps(body)[:500]}")
+                raise GqlError(f"empty GraphQL data: {json.dumps(body)[:500]}")
             return body["data"]
         time.sleep(2 ** (attempt + 1))
     raise last_err
@@ -510,12 +524,20 @@ def fetch_stats():
         try:
             a, d, c, m, dup = fetch_repo_loc(full_name, user["id"], seen)
         except RuntimeError as e:
-            if not t["private"]:
+            if not (t["private"] and os.environ.get("GITHUB_ACTIONS")):
                 raise
-            # The Actions log is public: keep the diagnosis (credential/SSO help, rate-limit
-            # detail) but swap the private name out, and drop the unmasked original.
-            msg = str(e).replace(full_name, label).replace(full_name.split("/")[1], label)
-            raise RuntimeError(msg) from None
+            # The Actions log is public, and upstream text can echo the private name in
+            # forms a find-and-replace misses (cut by gql's truncation, re-cased). Keep
+            # only structured fields and drop the original; a local run shows it in full.
+            status = getattr(e, "status", None)
+            hint = {401: "token expired or revoked: rotate ACCESS_TOKEN",
+                    403: "token lacks access: missing scope, org SSO, or rate limit"}
+            raise RuntimeError(
+                f"{label}: LOC query failed (HTTP {status or '-'}, "
+                f"GraphQL types {list(getattr(e, 'types', ())) or '-'}); "
+                f"{hint.get(status, 'details withheld from the public log')}. "
+                "Run GH_TOKEN=$(gh auth token) python3 generate.py locally for the full message."
+            ) from None
         additions += a
         deletions += d
         # dupes count too: a non-fork mirror's commits are the user's even when the
